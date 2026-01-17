@@ -169,12 +169,19 @@
   }
 
   function makeDots(el, level) {
-    var maxDots = 10;
+    var maxDots = 8;
     var onCount = clamp(level, 1, maxDots);
     var html = "";
     var i;
-    for (i = 0; i < maxDots; i++) {
-      html += '<i class="' + (i < onCount ? "on" : "") + '"></i>';
+    if (level > maxDots) {
+      for (i = 0; i < maxDots - 1; i++) {
+        html += '<i class="on"></i>';
+      }
+      html += '<i class="on more"></i>';
+    } else {
+      for (i = 0; i < maxDots; i++) {
+        html += '<i class="' + (i < onCount ? "on" : "") + '"></i>';
+      }
     }
     el.innerHTML = html;
   }

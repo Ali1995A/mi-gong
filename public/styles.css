@@ -80,21 +80,51 @@ body{
 
 .dots{
   display:inline-block;
-  height: 10px;
+  height: 12px;
+  white-space: nowrap;
 }
 
 .dots i{
   display:inline-block;
-  width:10px;
-  height:10px;
+  width:12px;
+  height:12px;
   border-radius:999px;
   background: rgba(90,42,69,.18);
-  margin-right:8px;
+  margin-right:7px;
 }
 
 .dots i.on{
   background: linear-gradient(180deg, var(--accent), var(--accent2));
   box-shadow: 0 6px 14px rgba(255,79,163,.35);
+}
+
+.dots i.more{
+  position: relative;
+}
+
+.dots i.more::after{
+  content: "★";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -58%);
+  font-size: 10px;
+  line-height: 1;
+  color: rgba(255,255,255,.92);
+  text-shadow: 0 2px 6px rgba(90,42,69,.22);
+}
+
+.btnIcon{
+  display:block;
+  line-height: 1;
+}
+
+.btnLabel{
+  display:block;
+  margin-top: 2px;
+  font-size: 11px;
+  letter-spacing: .3px;
+  opacity: .85;
 }
 
 .iconBtn{
@@ -106,6 +136,12 @@ body{
   color: var(--ink);
   font-size: 22px;
   box-shadow: var(--shadow);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap: 2px;
+  padding: 6px 4px;
 }
 
 .iconBtn.accent{
@@ -179,6 +215,11 @@ canvas{
   color: var(--ink);
   font-size: 22px;
   box-shadow: 0 10px 20px rgba(255,79,163,.16);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding: 6px 6px;
 }
 
 .padBtn.big{
@@ -236,6 +277,9 @@ button:active{
   .iconBtn{
     border-radius: 18px;
     font-size: 24px;
+  }
+  .btnLabel{
+    font-size: 12px;
   }
   .padBtn{
     height: 66px;
