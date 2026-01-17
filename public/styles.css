@@ -33,10 +33,33 @@ body{
   gap: 12px;
 }
 
+.layout{
+  flex: 1 1 auto;
+  min-height: 0;
+  display:flex;
+  gap: 12px;
+}
+
+.side{
+  flex: 0 0 240px;
+  width: 240px;
+  display:flex;
+  flex-direction:column;
+  gap: 12px;
+  min-height: 0;
+}
+
 .top{
   display:flex;
   align-items:center;
   justify-content:space-between;
+  gap: 10px;
+}
+
+.topBtns{
+  display:flex;
+  gap: 10px;
+  align-items:center;
 }
 
 .badge{
@@ -48,6 +71,7 @@ body{
   min-height: 44px;
   display:flex;
   align-items:center;
+  flex: 1 1 auto;
 }
 
 .dots{
@@ -78,6 +102,12 @@ body{
   color: var(--ink);
   font-size: 22px;
   box-shadow: var(--shadow);
+}
+
+.iconBtn.accent{
+  border-color: rgba(255,79,163,.35);
+  background: linear-gradient(180deg, rgba(255,139,197,.95), rgba(255,79,163,.95));
+  color:#fff;
 }
 
 .stage{
@@ -117,15 +147,7 @@ canvas{
   opacity: 1;
 }
 
-.controls{
-  display:flex;
-  gap: 12px;
-  align-items:center;
-  justify-content:space-between;
-}
-
 .pad{
-  flex: 1 1 auto;
   background: var(--panel);
   border: 2px solid rgba(255,79,163,.22);
   box-shadow: var(--shadow);
@@ -159,17 +181,6 @@ canvas{
   font-size: 26px;
 }
 
-.pill{
-  width: 72px;
-  height: 72px;
-  border-radius: 22px;
-  border: 2px solid rgba(255,79,163,.26);
-  background: linear-gradient(180deg, var(--accent2), var(--accent));
-  color: #fff;
-  font-size: 26px;
-  box-shadow: 0 16px 30px rgba(255,79,163,.28);
-}
-
 button{
   touch-action: manipulation;
 }
@@ -178,13 +189,15 @@ button:active{
   transform: translateY(1px);
 }
 
-@media (max-width: 520px){
-  .controls{
-    flex-direction:row;
+@media (max-width: 720px){
+  body{
+    overflow:auto;
   }
-  .pill{
-    width: 68px;
-    height: 68px;
-    border-radius: 20px;
+  .layout{
+    flex-direction:column;
+  }
+  .side{
+    width: auto;
+    flex: 0 0 auto;
   }
 }

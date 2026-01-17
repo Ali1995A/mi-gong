@@ -11,37 +11,39 @@
   </head>
   <body>
     <div class="app">
-      <header class="top">
-        <div class="badge" aria-label="Level">
-          <span id="levelDots" class="dots" aria-hidden="true"></span>
-        </div>
-        <button id="btnNew" class="iconBtn" type="button" aria-label="New">
-          <span aria-hidden="true">↻</span>
-        </button>
-      </header>
+      <div class="layout">
+        <main class="stage" role="application" aria-label="Maze game">
+          <canvas id="mazeCanvas"></canvas>
+          <div id="toast" class="toast" aria-live="polite"></div>
+        </main>
 
-      <main class="stage" role="application" aria-label="Maze game">
-        <canvas id="mazeCanvas"></canvas>
-        <div id="toast" class="toast" aria-live="polite"></div>
-      </main>
+        <aside class="side" aria-label="Controls">
+          <header class="top">
+            <div class="badge" aria-label="Level">
+              <span id="levelDots" class="dots" aria-hidden="true"></span>
+            </div>
+            <div class="topBtns">
+              <button id="btnNew" class="iconBtn" type="button" aria-label="New">
+                <span aria-hidden="true">↻</span>
+              </button>
+              <button id="btnHint" class="iconBtn accent" type="button" aria-label="Hint">
+                <span aria-hidden="true">✨</span>
+              </button>
+            </div>
+          </header>
 
-      <footer class="controls" aria-label="Controls">
-        <div class="pad">
-          <button class="padBtn" type="button" data-move="up" aria-label="Up">▲</button>
-          <div class="padRow">
-            <button class="padBtn" type="button" data-move="left" aria-label="Left">◀</button>
-            <button class="padBtn big" type="button" data-move="down" aria-label="Down">▼</button>
-            <button class="padBtn" type="button" data-move="right" aria-label="Right">▶</button>
+          <div class="pad">
+            <button class="padBtn" type="button" data-move="up" aria-label="Up">▲</button>
+            <div class="padRow">
+              <button class="padBtn" type="button" data-move="left" aria-label="Left">◀</button>
+              <button class="padBtn big" type="button" data-move="down" aria-label="Down">▼</button>
+              <button class="padBtn" type="button" data-move="right" aria-label="Right">▶</button>
+            </div>
           </div>
-        </div>
-
-        <button id="btnHint" class="pill" type="button" aria-label="Hint">
-          <span aria-hidden="true">✨</span>
-        </button>
-      </footer>
+        </aside>
+      </div>
     </div>
 
     <script src="./app.js"></script>
   </body>
 </html>
-
