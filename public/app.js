@@ -337,7 +337,7 @@
 
     var cols = state.maze.cols;
     var rows = state.maze.rows;
-    var pad = Math.floor(Math.min(w, h) * 0.06);
+    var pad = Math.floor(Math.min(w, h) * 0.04);
     var boardW = w - pad * 2;
     var boardH = h - pad * 2;
     var cell = Math.floor(Math.min(boardW / cols, boardH / rows));
@@ -350,7 +350,7 @@
     bgGrad.addColorStop(0, "rgba(255,255,255,0.95)");
     bgGrad.addColorStop(1, "rgba(255,232,244,0.88)");
     ctx.fillStyle = bgGrad;
-    ctx.fillRect(ox - 10, oy - 10, bw + 20, bh + 20);
+    ctx.fillRect(ox - 8, oy - 8, bw + 16, bh + 16);
 
     var wallColor = "rgba(90,42,69,0.55)";
     var wallWidth = Math.max(2, Math.floor(cell * 0.12));
