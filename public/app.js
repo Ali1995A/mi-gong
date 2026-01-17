@@ -219,6 +219,7 @@
     particles: [],
     lastFrameAt: 0,
     fireworksUntil: 0,
+    obstacle: null,
     settings: { remember: false, tier: 1 }
   };
 
@@ -289,10 +290,117 @@
     state.gy = size - 1;
     state.hintOn = state.level <= 2;
     state.winFlashUntil = 0;
+    state.obstacle = null;
     makeDots(levelDots, state.level);
     showToast(toast, "");
+    spawnObstacleIfNeeded();
     resize();
     draw();
+  }
+
+  function neighborsOpen(x, y) {
+    var cols = state.maze.cols;
+    var i = y * cols + x;
+    var w = state.maze.walls[i];
+    var list = [];
+    if (!w.n && y > 0) list.push({ x: x, y: y - 1 });
+    if (!w.e && x < cols - 1) list.push({ x: x + 1, y: y });
+    if (!w.s && y < state.maze.rows - 1) list.push({ x: x, y: y + 1 });
+    if (!w.w && x > 0) list.push({ x: x - 1, y: y });
+    return list;
+  }
+
+  function cellIndex(x, y) {
+    return y * state.maze.cols + x;
+  }
+
+  function bfsDistancesFrom(sx, sy) {
+    var cols = state.maze.cols;
+    var rows = state.maze.rows;
+    var total = cols * rows;
+    var dist = new Array(total);
+    var qx = [];
+    var qy = [];
+    var head = 0;
+    var tail = 0;
+    var i;
+    for (i = 0; i < total; i++) dist[i] = -1;
+    dist[cellIndex(sx, sy)] = 0;
+    qx[tail] = sx;
+    qy[tail] = sy;
+    tail++;
+    while (head < tail) {
+      var x = qx[head];
+      var y = qy[head];
+      head++;
+      var di = dist[cellIndex(x, y)];
+      var nbs = neighborsOpen(x, y);
+      for (i = 0; i < nbs.length; i++) {
+        var nx = nbs[i].x;
+        var ny = nbs[i].y;
+        var ni = cellIndex(nx, ny);
+        if (dist[ni] !== -1) continue;
+        dist[ni] = di + 1;
+        qx[tail] = nx;
+        qy[tail] = ny;
+        tail++;
+      }
+    }
+    return dist;
+  }
+
+  function spawnObstacleIfNeeded() {
+    if (!state.maze) return;
+    if (state.level < 10) return;
+    var cols = state.maze.cols;
+    var rows = state.maze.rows;
+    var distFromStart = bfsDistancesFrom(0, 0);
+    var best = [];
+    var bestScore = -1;
+    var x, y, i, s, gi;
+    for (y = 0; y < rows; y++) {
+      for (x = 0; x < cols; x++) {
+        if (x === 0 && y === 0) continue;
+        if (x === state.gx && y === state.gy) continue;
+        i = y * cols + x;
+        s = distFromStart[i];
+        if (s < 0) continue;
+        gi = Math.abs(state.gx - x) + Math.abs(state.gy - y);
+        if (s < Math.floor(cols * 0.7)) continue;
+        if (gi < Math.floor(cols * 0.5)) continue;
+        if (neighborsOpen(x, y).length < 2) continue;
+        var score = s + gi * 0.6;
+        if (score > bestScore) {
+          bestScore = score;
+          best = [{ x: x, y: y }];
+        } else if (Math.abs(score - bestScore) < 1.5) {
+          best.push({ x: x, y: y });
+        }
+      }
+    }
+
+    if (!best.length) {
+      for (y = rows - 1; y >= 0; y--) {
+        for (x = cols - 1; x >= 0; x--) {
+          if (x === state.gx && y === state.gy) continue;
+          if (neighborsOpen(x, y).length >= 2) {
+            best.push({ x: x, y: y });
+            break;
+          }
+        }
+        if (best.length) break;
+      }
+    }
+
+    var pick = best[randInt(best.length)];
+    state.obstacle = {
+      x: pick.x,
+      y: pick.y,
+      prevX: pick.x,
+      prevY: pick.y,
+      nextMoveAt: now() + 900 + randInt(700),
+      paceMs: 520 + randInt(160)
+    };
   }
 
   function startAtLevel(level) {
@@ -338,10 +446,28 @@
     else if (dir === "down") state.py += 1;
     else if (dir === "left") state.px -= 1;
     state.lastMoveAt = t;
+    if (state.obstacle && state.px === state.obstacle.x && state.py === state.obstacle.y) {
+      gameOver();
+      return;
+    }
     if (state.px === state.gx && state.py === state.gy) {
       nextLevel();
     } else {
       draw();
+    }
+  }
+
+  function gameOver() {
+    state.winFlashUntil = now() + 260;
+    state.fireworksUntil = 0;
+    state.particles.length = 0;
+    showToast(toast, "zailai");
+    persistProgress();
+    startAtLevel(state.level);
+    if (navigator && navigator.vibrate) {
+      try {
+        navigator.vibrate(40);
+      } catch (e) {}
     }
   }
 
@@ -482,6 +608,59 @@
     }
   }
 
+  function updateObstacle(t) {
+    if (!state.obstacle) return;
+    if (t < state.obstacle.nextMoveAt) return;
+    var o = state.obstacle;
+    var nbs = neighborsOpen(o.x, o.y);
+    if (!nbs.length) {
+      o.nextMoveAt = t + o.paceMs;
+      return;
+    }
+
+    var i;
+    var options = [];
+    for (i = 0; i < nbs.length; i++) {
+      var nx = nbs[i].x;
+      var ny = nbs[i].y;
+      if (nx === state.px && ny === state.py) continue;
+      if (nx === state.gx && ny === state.gy) continue;
+      options.push(nbs[i]);
+    }
+    if (!options.length) {
+      o.nextMoveAt = t + o.paceMs;
+      return;
+    }
+
+    var best = null;
+    var bestScore = -1e9;
+    for (i = 0; i < options.length; i++) {
+      var c = options[i];
+      var back = c.x === o.prevX && c.y === o.prevY ? 1 : 0;
+      var dp = Math.abs(c.x - state.px) + Math.abs(c.y - state.py);
+      var dg = Math.abs(c.x - state.gx) + Math.abs(c.y - state.gy);
+      var score = Math.random() * 0.9 + dp * 0.28 + dg * 0.06 - back * 0.7;
+      if (score > bestScore) {
+        bestScore = score;
+        best = c;
+      }
+    }
+    if (!best) best = options[randInt(options.length)];
+
+    o.prevX = o.x;
+    o.prevY = o.y;
+    o.x = best.x;
+    o.y = best.y;
+
+    if (state.px === o.x && state.py === o.y) {
+      gameOver();
+      return;
+    }
+
+    var jitter = randInt(160) - 60;
+    o.nextMoveAt = t + o.paceMs + jitter;
+  }
+
   function drawHeart(x, y, r, fillStyle) {
     ctx.save();
     ctx.translate(x, y);
@@ -526,6 +705,7 @@
     var dt = clamp(t - state.lastFrameAt, 0, 50);
     state.lastFrameAt = t;
     updateParticles(dt);
+    updateObstacle(t);
     ctx.clearRect(0, 0, w, h);
 
     var cols = state.maze.cols;
@@ -619,6 +799,37 @@
     ctx.fillStyle = "rgba(255,79,163,0.88)";
     ctx.arc(playerCx, playerCy, pr, 0, Math.PI * 2, false);
     ctx.fill();
+
+    if (state.obstacle) {
+      var ox2 = ox + (state.obstacle.x + 0.5) * cell;
+      var oy2 = oy + (state.obstacle.y + 0.5) * cell;
+      var wob = 1 + 0.08 * Math.sin((t + (state.obstacle.x + state.obstacle.y) * 30) / 160);
+      var rr = cell * 0.26 * wob;
+      ctx.save();
+      ctx.globalAlpha = 0.98;
+      ctx.fillStyle = "rgba(120,55,120,0.92)";
+      ctx.beginPath();
+      ctx.arc(ox2, oy2, rr, 0, Math.PI * 2, false);
+      ctx.fill();
+      ctx.globalAlpha = 0.22;
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.beginPath();
+      ctx.arc(ox2 - rr * 0.25, oy2 - rr * 0.25, rr * 0.55, 0, Math.PI * 2, false);
+      ctx.fill();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.beginPath();
+      ctx.arc(ox2 - rr * 0.22, oy2 - rr * 0.08, rr * 0.13, 0, Math.PI * 2, false);
+      ctx.arc(ox2 + rr * 0.08, oy2 - rr * 0.08, rr * 0.13, 0, Math.PI * 2, false);
+      ctx.fill();
+      ctx.globalAlpha = 0.9;
+      ctx.fillStyle = "rgba(90,42,69,0.95)";
+      ctx.beginPath();
+      ctx.arc(ox2 - rr * 0.2, oy2 - rr * 0.06, rr * 0.06, 0, Math.PI * 2, false);
+      ctx.arc(ox2 + rr * 0.1, oy2 - rr * 0.06, rr * 0.06, 0, Math.PI * 2, false);
+      ctx.fill();
+      ctx.restore();
+    }
 
     if (t < state.winFlashUntil) {
       ctx.save();
