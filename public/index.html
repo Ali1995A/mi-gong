@@ -19,6 +19,7 @@
 
         <aside class="side" aria-label="Controls">
           <header class="top">
+            <div class="logo" aria-label="CC">CC</div>
             <div class="badge" aria-label="Level">
               <span id="levelDots" class="dots" aria-hidden="true"></span>
             </div>
@@ -33,6 +34,42 @@
               </button>
             </div>
           </header>
+
+          <section class="panel" aria-label="Settings">
+            <div class="row">
+              <div class="rowTitle" aria-hidden="true">
+                <span class="rowIcon">🔖</span>
+                <span class="rowText">jizhu</span>
+              </div>
+              <label class="switch">
+                <input id="rememberToggle" type="checkbox" aria-label="Remember level" />
+                <span class="slider" aria-hidden="true"></span>
+              </label>
+            </div>
+
+            <div class="difficulty" aria-label="Difficulty">
+              <button class="chip" type="button" data-tier="1" aria-label="Difficulty 1">
+                <span class="chipIcon" aria-hidden="true">♡</span>
+                <span class="chipLabel" aria-hidden="true">jiandan</span>
+              </button>
+              <button class="chip" type="button" data-tier="2" aria-label="Difficulty 2">
+                <span class="chipIcon" aria-hidden="true">♡♡</span>
+                <span class="chipLabel" aria-hidden="true">rongyi</span>
+              </button>
+              <button class="chip" type="button" data-tier="3" aria-label="Difficulty 3">
+                <span class="chipIcon" aria-hidden="true">♡♡♡</span>
+                <span class="chipLabel" aria-hidden="true">yiban</span>
+              </button>
+              <button class="chip" type="button" data-tier="4" aria-label="Difficulty 4">
+                <span class="chipIcon" aria-hidden="true">♡♡♡♡</span>
+                <span class="chipLabel" aria-hidden="true">kunnan</span>
+              </button>
+              <button class="chip" type="button" data-tier="5" aria-label="Difficulty 5">
+                <span class="chipIcon" aria-hidden="true">♡♡♡♡♡</span>
+                <span class="chipLabel" aria-hidden="true">chaonan</span>
+              </button>
+            </div>
+          </section>
 
           <div class="pad">
             <button class="padBtn" type="button" data-move="up" aria-label="Up">

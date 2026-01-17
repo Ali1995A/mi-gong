@@ -200,9 +200,11 @@
   var toast = document.getElementById("toast");
   var btnNew = document.getElementById("btnNew");
   var btnHint = document.getElementById("btnHint");
+  var rememberToggle = document.getElementById("rememberToggle");
 
   var ctx = canvas.getContext("2d");
   var deviceRatio = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
+  var audio = { ctx: null, unlocked: false, noiseBuf: null };
 
   var state = {
     level: 1,
@@ -213,8 +215,63 @@
     gy: 0,
     hintOn: false,
     lastMoveAt: 0,
-    winFlashUntil: 0
+    winFlashUntil: 0,
+    particles: [],
+    lastFrameAt: 0,
+    fireworksUntil: 0,
+    settings: { remember: false, tier: 1 }
   };
+
+  var STORAGE = {
+    remember: "ccMaze.remember",
+    tier: "ccMaze.tier",
+    level: "ccMaze.level"
+  };
+
+  function loadSettings() {
+    var tier = parseInt(localStorage.getItem(STORAGE.tier) || "1", 10);
+    tier = clamp(isNaN(tier) ? 1 : tier, 1, 5);
+    var remember = localStorage.getItem(STORAGE.remember) === "1";
+    state.settings.tier = tier;
+    state.settings.remember = remember;
+    if (rememberToggle) rememberToggle.checked = remember;
+    setTierSelected(tier);
+  }
+
+  function saveSettings() {
+    localStorage.setItem(STORAGE.tier, String(state.settings.tier));
+    localStorage.setItem(STORAGE.remember, state.settings.remember ? "1" : "0");
+  }
+
+  function persistProgress() {
+    if (!state.settings.remember) return;
+    localStorage.setItem(STORAGE.level, String(state.level));
+  }
+
+  function tierToStartLevel(tier) {
+    if (tier === 1) return 1;
+    if (tier === 2) return 3;
+    if (tier === 3) return 6;
+    if (tier === 4) return 10;
+    return 14;
+  }
+
+  function getInitialLevel() {
+    if (state.settings.remember) {
+      var saved = parseInt(localStorage.getItem(STORAGE.level) || "0", 10);
+      if (!isNaN(saved) && saved > 0) return saved;
+    }
+    return tierToStartLevel(state.settings.tier);
+  }
+
+  function setTierSelected(tier) {
+    var chips = document.querySelectorAll(".chip[data-tier]");
+    var i;
+    for (i = 0; i < chips.length; i++) {
+      var t = parseInt(chips[i].getAttribute("data-tier") || "0", 10);
+      chips[i].className = "chip" + (t === tier ? " on" : "");
+    }
+  }
 
   function levelToSize(level) {
     var base = 5;
@@ -223,8 +280,7 @@
     return clamp(size, 5, 19);
   }
 
-  function newGame(keepLevel) {
-    if (!keepLevel) state.level = 1;
+  function generateForLevel() {
     var size = levelToSize(state.level);
     state.maze = createMaze(size, size);
     state.px = 0;
@@ -239,20 +295,20 @@
     draw();
   }
 
+  function startAtLevel(level) {
+    state.level = Math.max(1, Math.floor(level || 1));
+    generateForLevel();
+    persistProgress();
+  }
+
   function nextLevel() {
     state.level += 1;
-    var size = levelToSize(state.level);
-    state.maze = createMaze(size, size);
-    state.px = 0;
-    state.py = 0;
-    state.gx = size - 1;
-    state.gy = size - 1;
-    state.hintOn = state.level <= 2;
     state.winFlashUntil = now() + 900;
-    makeDots(levelDots, state.level);
-    showToast(toast, "★");
-    resize();
-    draw();
+    state.fireworksUntil = now() + 1200;
+    spawnFireworks();
+    playWinSound();
+    generateForLevel();
+    persistProgress();
   }
 
   function canMove(dir) {
@@ -301,6 +357,131 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 
+  function spawnFireworks() {
+    var w = canvas.width;
+    var h = canvas.height;
+    if (!w || !h) return;
+    var colors = ["#ff4fa3", "#ff8bc5", "#ffd1ea", "#ffffff"];
+    var count = 90;
+    var i;
+    var baseX = (state.gx + 0.5) / state.maze.cols;
+    var baseY = (state.gy + 0.5) / state.maze.rows;
+    var cx = w * (0.2 + 0.6 * baseX);
+    var cy = h * (0.2 + 0.6 * baseY);
+    for (i = 0; i < count; i++) {
+      var a = Math.random() * Math.PI * 2;
+      var sp = (0.35 + Math.random() * 1.25) * Math.min(w, h) * 0.0024;
+      state.particles.push({
+        x: cx + (Math.random() - 0.5) * 22,
+        y: cy + (Math.random() - 0.5) * 22,
+        vx: Math.cos(a) * sp,
+        vy: Math.sin(a) * sp - Math.random() * 0.5,
+        life: 0,
+        maxLife: 700 + Math.random() * 650,
+        r: 1.6 + Math.random() * 2.2,
+        c: colors[randInt(colors.length)]
+      });
+    }
+  }
+
+  function updateParticles(dtMs) {
+    if (!state.particles.length) return;
+    var g = dtMs * 0.0007;
+    var i;
+    for (i = state.particles.length - 1; i >= 0; i--) {
+      var p = state.particles[i];
+      p.life += dtMs;
+      if (p.life >= p.maxLife) {
+        state.particles.splice(i, 1);
+        continue;
+      }
+      p.vy += g;
+      p.x += p.vx * dtMs;
+      p.y += p.vy * dtMs;
+      p.vx *= 0.987;
+      p.vy *= 0.987;
+    }
+  }
+
+  function drawParticles() {
+    if (!state.particles.length) return;
+    var i;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter";
+    for (i = 0; i < state.particles.length; i++) {
+      var p = state.particles[i];
+      var a = 1 - p.life / p.maxLife;
+      a = a * a;
+      ctx.globalAlpha = 0.82 * a;
+      ctx.fillStyle = p.c;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2, false);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function unlockAudio() {
+    if (audio.unlocked) return;
+    var Ctx = window.AudioContext || window.webkitAudioContext;
+    if (!Ctx) return;
+    try {
+      audio.ctx = new Ctx();
+      if (audio.ctx && audio.ctx.state === "suspended" && audio.ctx.resume) {
+        audio.ctx.resume();
+      }
+      audio.unlocked = true;
+    } catch (e) {
+      audio.unlocked = false;
+    }
+  }
+
+  function getNoiseBuffer() {
+    if (!audio.ctx) return null;
+    if (audio.noiseBuf) return audio.noiseBuf;
+    var sr = audio.ctx.sampleRate || 44100;
+    var len = Math.floor(sr * 0.12);
+    var buf = audio.ctx.createBuffer(1, len, sr);
+    var data = buf.getChannelData(0);
+    var i;
+    for (i = 0; i < len; i++) {
+      data[i] = (Math.random() * 2 - 1) * (1 - i / len);
+    }
+    audio.noiseBuf = buf;
+    return buf;
+  }
+
+  function playClap(atTime) {
+    if (!audio.ctx) return;
+    var buf = getNoiseBuffer();
+    if (!buf) return;
+    var src = audio.ctx.createBufferSource();
+    src.buffer = buf;
+    var filter = audio.ctx.createBiquadFilter();
+    filter.type = "bandpass";
+    filter.frequency.value = 1200 + Math.random() * 800;
+    filter.Q.value = 0.6 + Math.random() * 0.8;
+    var gain = audio.ctx.createGain();
+    var t0 = atTime || audio.ctx.currentTime;
+    gain.gain.setValueAtTime(0.0001, t0);
+    gain.gain.exponentialRampToValueAtTime(0.38 + Math.random() * 0.22, t0 + 0.008);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.12);
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(audio.ctx.destination);
+    src.start(t0);
+    src.stop(t0 + 0.14);
+  }
+
+  function playWinSound() {
+    if (!audio.unlocked || !audio.ctx) return;
+    var base = audio.ctx.currentTime + 0.02;
+    var i;
+    for (i = 0; i < 12; i++) {
+      playClap(base + Math.random() * 0.75);
+    }
+  }
+
   function drawHeart(x, y, r, fillStyle) {
     ctx.save();
     ctx.translate(x, y);
@@ -340,6 +521,11 @@
     if (!state.maze) return;
     var w = canvas.width;
     var h = canvas.height;
+    var t = now();
+    if (!state.lastFrameAt) state.lastFrameAt = t;
+    var dt = clamp(t - state.lastFrameAt, 0, 50);
+    state.lastFrameAt = t;
+    updateParticles(dt);
     ctx.clearRect(0, 0, w, h);
 
     var cols = state.maze.cols;
@@ -427,7 +613,6 @@
 
     var playerCx = ox + (state.px + 0.5) * cell;
     var playerCy = oy + (state.py + 0.5) * cell;
-    var t = now();
     var pulse = 1 + 0.06 * Math.sin(t / 140);
     var pr = cell * 0.28 * pulse;
     ctx.beginPath();
@@ -441,6 +626,10 @@
       ctx.fillStyle = "rgba(255,79,163,1)";
       ctx.fillRect(0, 0, w, h);
       ctx.restore();
+    }
+
+    if (t < state.fireworksUntil) {
+      drawParticles();
     }
   }
 
@@ -530,7 +719,7 @@
 
   function bindButtons() {
     btnNew.addEventListener("click", function () {
-      newGame(true);
+      generateForLevel();
       showToast(toast, "↻");
     });
     btnHint.addEventListener("click", function () {
@@ -538,6 +727,32 @@
       showToast(toast, state.hintOn ? "✨" : "");
       draw();
     });
+
+    if (rememberToggle) {
+      rememberToggle.addEventListener("change", function () {
+        state.settings.remember = !!rememberToggle.checked;
+        saveSettings();
+        if (state.settings.remember) persistProgress();
+      });
+    }
+
+    var chips = document.querySelectorAll(".chip[data-tier]");
+    var i;
+    for (i = 0; i < chips.length; i++) {
+      (function (el) {
+        el.addEventListener("click", function () {
+          var t = parseInt(el.getAttribute("data-tier") || "1", 10);
+          t = clamp(isNaN(t) ? 1 : t, 1, 5);
+          state.settings.tier = t;
+          setTierSelected(t);
+          saveSettings();
+          if (!state.settings.remember) {
+            startAtLevel(getInitialLevel());
+            showToast(toast, "♡");
+          }
+        });
+      })(chips[i]);
+    }
   }
 
   function tick() {
@@ -554,6 +769,9 @@
   bindSwipe();
   bindKeyboard();
   bindButtons();
-  newGame(false);
+  document.addEventListener("touchend", unlockAudio, false);
+  document.addEventListener("click", unlockAudio, false);
+  loadSettings();
+  startAtLevel(getInitialLevel());
   window.requestAnimationFrame(tick);
 })();

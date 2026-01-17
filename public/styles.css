@@ -60,10 +60,149 @@ body{
   gap: 10px;
 }
 
+.logo{
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,139,197,.95), rgba(255,79,163,.95));
+  box-shadow: 0 16px 30px rgba(255,79,163,.22);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:#fff;
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: .6px;
+  border: 2px solid rgba(255,255,255,.55);
+  flex: 0 0 auto;
+  user-select:none;
+}
+
 .topBtns{
   display:flex;
   gap: 10px;
   align-items:center;
+}
+
+.panel{
+  background: var(--panel);
+  border: 2px solid rgba(255,79,163,.22);
+  box-shadow: var(--shadow);
+  border-radius: var(--radius);
+  padding: 12px;
+  display:flex;
+  flex-direction:column;
+  gap: 10px;
+}
+
+.row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+}
+
+.rowTitle{
+  display:flex;
+  align-items:center;
+  gap: 8px;
+  color: rgba(90,42,69,.9);
+}
+
+.rowIcon{
+  display:inline-block;
+  width: 22px;
+  text-align:center;
+}
+
+.rowText{
+  font-size: 12px;
+  letter-spacing: .3px;
+  opacity: .9;
+}
+
+.switch{
+  position: relative;
+  width: 60px;
+  height: 34px;
+  display:inline-block;
+  flex: 0 0 auto;
+}
+
+.switch input{
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider{
+  position:absolute;
+  cursor:pointer;
+  top:0;
+  left:0;
+  right:0;
+  bottom:0;
+  background: rgba(90,42,69,.16);
+  border: 2px solid rgba(255,79,163,.18);
+  transition: .18s ease;
+  border-radius: 999px;
+}
+
+.slider:before{
+  position:absolute;
+  content:"";
+  height: 26px;
+  width: 26px;
+  left: 4px;
+  top: 3px;
+  background: #fff;
+  transition: .18s ease;
+  border-radius: 999px;
+  box-shadow: 0 10px 20px rgba(255,79,163,.18);
+}
+
+.switch input:checked + .slider{
+  background: linear-gradient(180deg, rgba(255,139,197,.95), rgba(255,79,163,.95));
+}
+
+.switch input:checked + .slider:before{
+  transform: translateX(24px);
+}
+
+.difficulty{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.chip{
+  height: 44px;
+  border-radius: 16px;
+  border: 2px solid rgba(255,79,163,.18);
+  background: rgba(255,255,255,.75);
+  box-shadow: 0 10px 18px rgba(255,79,163,.12);
+  color: var(--ink);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding: 0 10px;
+}
+
+.chipIcon{
+  font-size: 16px;
+  letter-spacing: .3px;
+  color: rgba(255,79,163,.95);
+}
+
+.chipLabel{
+  font-size: 11px;
+  letter-spacing: .3px;
+  opacity: .85;
+}
+
+.chip.on{
+  border-color: rgba(255,79,163,.38);
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,232,244,.92));
 }
 
 .badge{
@@ -103,7 +242,7 @@ body{
 }
 
 .dots i.more::after{
-  content: "★";
+  content: "\\2605";
   position: absolute;
   left: 50%;
   top: 50%;
@@ -270,6 +409,12 @@ button:active{
     justify-content: space-between;
     gap: 12px;
   }
+  .logo{
+    width: 60px;
+    height: 60px;
+    border-radius: 20px;
+    font-size: 22px;
+  }
   .badge{
     min-height: 56px;
     padding: 12px 16px;
@@ -288,5 +433,15 @@ button:active{
   }
   .padBtn.big{
     font-size: 30px;
+  }
+  .chip{
+    height: 50px;
+    border-radius: 18px;
+  }
+  .chipIcon{
+    font-size: 17px;
+  }
+  .chipLabel{
+    font-size: 12px;
   }
 }
