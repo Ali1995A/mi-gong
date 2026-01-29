@@ -190,9 +190,10 @@
     el.textContent = msg || "";
     if (!msg) return;
     el.className = "toast on";
+    var durationMs = arguments.length >= 3 ? arguments[2] : 900;
     setTimeout(function () {
       el.className = "toast";
-    }, 900);
+    }, durationMs);
   }
 
   var canvas = document.getElementById("mazeCanvas");
@@ -219,6 +220,7 @@
     particles: [],
     lastFrameAt: 0,
     fireworksUntil: 0,
+    fireworksNextAt: 0,
     obstacle: null,
     settings: { remember: false, tier: 1, hint: true }
   };
@@ -296,6 +298,9 @@
     state.gy = size - 1;
     state.hintOn = !!state.settings.hint;
     state.winFlashUntil = 0;
+    state.fireworksUntil = 0;
+    state.fireworksNextAt = 0;
+    state.particles.length = 0;
     state.obstacle = null;
     makeDots(levelDots, state.level);
     showToast(toast, "");
@@ -417,11 +422,14 @@
 
   function nextLevel() {
     state.level += 1;
-    state.winFlashUntil = now() + 900;
-    state.fireworksUntil = now() + 1200;
-    spawnFireworks();
-    playWinSound();
     generateForLevel();
+    state.particles.length = 0;
+    state.winFlashUntil = now() + 1400;
+    state.fireworksUntil = now() + 3600;
+    state.fireworksNextAt = now() + 520;
+    spawnFireworks(1.2);
+    playWinSound();
+    showToast(toast, "🎉", 1200);
     persistProgress();
   }
 
@@ -466,6 +474,7 @@
   function gameOver() {
     state.winFlashUntil = now() + 260;
     state.fireworksUntil = 0;
+    state.fireworksNextAt = 0;
     state.particles.length = 0;
     showToast(toast, "zàilái");
     persistProgress();
@@ -489,28 +498,33 @@
     ctx.setTransform(1, 0, 0, 1, 0, 0);
   }
 
-  function spawnFireworks() {
+  function spawnFireworks(intensity) {
     var w = canvas.width;
     var h = canvas.height;
     if (!w || !h) return;
+    var k = typeof intensity === "number" && isFinite(intensity) ? intensity : 1;
     var colors = ["#ff4fa3", "#ff8bc5", "#ffd1ea", "#ffffff"];
-    var count = 90;
+    var baseCount = 110 + Math.floor(Math.min(w, h) * 0.06);
+    var count = clamp(Math.floor(baseCount * k), 90, 260);
     var i;
     var baseX = (state.gx + 0.5) / state.maze.cols;
     var baseY = (state.gy + 0.5) / state.maze.rows;
     var cx = w * (0.2 + 0.6 * baseX);
     var cy = h * (0.2 + 0.6 * baseY);
+    cx += (Math.random() - 0.5) * Math.min(w, h) * 0.08;
+    cy += (Math.random() - 0.5) * Math.min(w, h) * 0.08;
+    var baseR = Math.max(2.2, Math.min(w, h) * 0.0065);
     for (i = 0; i < count; i++) {
       var a = Math.random() * Math.PI * 2;
-      var sp = (0.35 + Math.random() * 1.25) * Math.min(w, h) * 0.0024;
+      var sp = (0.55 + Math.random() * 1.55) * Math.min(w, h) * 0.0034;
       state.particles.push({
         x: cx + (Math.random() - 0.5) * 22,
         y: cy + (Math.random() - 0.5) * 22,
         vx: Math.cos(a) * sp,
-        vy: Math.sin(a) * sp - Math.random() * 0.5,
+        vy: Math.sin(a) * sp - Math.random() * 1.2,
         life: 0,
-        maxLife: 700 + Math.random() * 650,
-        r: 1.6 + Math.random() * 2.2,
+        maxLife: 1100 + Math.random() * 1400,
+        r: baseR * (0.55 + Math.random() * 1.05),
         c: colors[randInt(colors.length)]
       });
     }
@@ -518,7 +532,7 @@
 
   function updateParticles(dtMs) {
     if (!state.particles.length) return;
-    var g = dtMs * 0.0007;
+    var g = dtMs * 0.00075;
     var i;
     for (i = state.particles.length - 1; i >= 0; i--) {
       var p = state.particles[i];
@@ -544,7 +558,7 @@
       var p = state.particles[i];
       var a = 1 - p.life / p.maxLife;
       a = a * a;
-      ctx.globalAlpha = 0.82 * a;
+      ctx.globalAlpha = 0.95 * a;
       ctx.fillStyle = p.c;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2, false);
@@ -710,6 +724,12 @@
     if (!state.lastFrameAt) state.lastFrameAt = t;
     var dt = clamp(t - state.lastFrameAt, 0, 50);
     state.lastFrameAt = t;
+
+    if (t < state.fireworksUntil && state.fireworksNextAt && t >= state.fireworksNextAt) {
+      state.fireworksNextAt = t + 420 + randInt(260);
+      spawnFireworks(0.55);
+    }
+
     updateParticles(dt);
     updateObstacle(t);
     ctx.clearRect(0, 0, w, h);
@@ -839,7 +859,9 @@
 
     if (t < state.winFlashUntil) {
       ctx.save();
-      ctx.globalAlpha = 0.12;
+      var p = clamp((state.winFlashUntil - t) / 1400, 0, 1);
+      var pulse = 0.12 + 0.14 * (1 - p);
+      ctx.globalAlpha = pulse;
       ctx.fillStyle = "rgba(255,79,163,1)";
       ctx.fillRect(0, 0, w, h);
       ctx.restore();
