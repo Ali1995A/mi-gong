@@ -199,8 +199,8 @@
   var levelDots = document.getElementById("levelDots");
   var toast = document.getElementById("toast");
   var btnNew = document.getElementById("btnNew");
-  var btnHint = document.getElementById("btnHint");
   var rememberToggle = document.getElementById("rememberToggle");
+  var hintToggle = document.getElementById("hintToggle");
 
   var ctx = canvas.getContext("2d");
   var deviceRatio = Math.max(1, Math.min(3, window.devicePixelRatio || 1));
@@ -220,28 +220,34 @@
     lastFrameAt: 0,
     fireworksUntil: 0,
     obstacle: null,
-    settings: { remember: false, tier: 1 }
+    settings: { remember: false, tier: 1, hint: true }
   };
 
   var STORAGE = {
     remember: "ccMaze.remember",
     tier: "ccMaze.tier",
-    level: "ccMaze.level"
+    level: "ccMaze.level",
+    hint: "ccMaze.hint"
   };
 
   function loadSettings() {
     var tier = parseInt(localStorage.getItem(STORAGE.tier) || "1", 10);
     tier = clamp(isNaN(tier) ? 1 : tier, 1, 5);
     var remember = localStorage.getItem(STORAGE.remember) === "1";
+    var hint = localStorage.getItem(STORAGE.hint);
+    hint = hint === null ? true : hint === "1";
     state.settings.tier = tier;
     state.settings.remember = remember;
+    state.settings.hint = hint;
     if (rememberToggle) rememberToggle.checked = remember;
+    if (hintToggle) hintToggle.checked = hint;
     setTierSelected(tier);
   }
 
   function saveSettings() {
     localStorage.setItem(STORAGE.tier, String(state.settings.tier));
     localStorage.setItem(STORAGE.remember, state.settings.remember ? "1" : "0");
+    localStorage.setItem(STORAGE.hint, state.settings.hint ? "1" : "0");
   }
 
   function persistProgress() {
@@ -288,7 +294,7 @@
     state.py = 0;
     state.gx = size - 1;
     state.gy = size - 1;
-    state.hintOn = state.level <= 2;
+    state.hintOn = !!state.settings.hint;
     state.winFlashUntil = 0;
     state.obstacle = null;
     makeDots(levelDots, state.level);
@@ -461,7 +467,7 @@
     state.winFlashUntil = now() + 260;
     state.fireworksUntil = 0;
     state.particles.length = 0;
-    showToast(toast, "zailai");
+    showToast(toast, "zàilái");
     persistProgress();
     startAtLevel(state.level);
     if (navigator && navigator.vibrate) {
@@ -933,17 +939,22 @@
       generateForLevel();
       showToast(toast, "↻");
     });
-    btnHint.addEventListener("click", function () {
-      state.hintOn = !state.hintOn;
-      showToast(toast, state.hintOn ? "✨" : "");
-      draw();
-    });
 
     if (rememberToggle) {
       rememberToggle.addEventListener("change", function () {
         state.settings.remember = !!rememberToggle.checked;
         saveSettings();
         if (state.settings.remember) persistProgress();
+      });
+    }
+
+    if (hintToggle) {
+      hintToggle.addEventListener("change", function () {
+        state.settings.hint = !!hintToggle.checked;
+        state.hintOn = state.settings.hint;
+        saveSettings();
+        showToast(toast, state.hintOn ? "✨" : "");
+        draw();
       });
     }
 
